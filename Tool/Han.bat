@@ -28,24 +28,20 @@ if "%PROXY_ENABLE%" NEQ "0" if "%PROXY_ENABLE%" NEQ "1" (
 	echo 错误的代理选项
 	call :exit
 )
+if "%PROXY_ENABLE%" EQU "0" (
+	echo 设置为不使用代理
+)
 if "%PROXY_ENABLE%" EQU "1" (
 	if not defined %PROXY_ADDRESS (
 		echo 读取配置文件失败
 		call :exit
 	)
 	echo 代理服务地址为：%PROXY_ADDRESS%
-)
-if "%PROXY_ENABLE%" EQU "0" (
-	echo 设置为不使用代理
+	set ALL_PROXY=%PROXY_ADDRESS:"=%
 )
 
 echo 获取语言文件版本号
-if "%PROXY_ENABLE%" EQU "0" (
-	for /F %%i in ('curl -L https://dn.blackdesert.com.tw/UploadData/ads_version --silent --fail --show-error') do (set version=%%i)
-)
-if "%PROXY_ENABLE%" EQU "1" (
-	for /F %%i in ('curl -L https://dn.blackdesert.com.tw/UploadData/ads_version -x %PROXY_ADDRESS% --silent --fail --show-error') do (set version=%%i)
-)
+for /F %%i in ('curl -L https://dn.blackdesert.com.tw/UploadData/ads_version --silent --fail --show-error') do (set version=%%i)
 if not defined %version (
 	echo 获取版本号失败
 	call :exit
@@ -53,12 +49,7 @@ if not defined %version (
 echo 语言文件版本号为：%version%
 
 echo 下载语言文件
-if "%PROXY_ENABLE%" EQU "0" (
-	curl -L https://dn.blackdesert.com.tw/UploadData/ads/languagedata_tw/%version%/languagedata_tw.loc --silent --fail --show-error --output %TEMP%\BDOHan\languagedata_tw.loc
-)
-if "%PROXY_ENABLE%" EQU "1" (
-	curl -L https://dn.blackdesert.com.tw/UploadData/ads/languagedata_tw/%version%/languagedata_tw.loc -x %PROXY_ADDRESS% --silent --fail --show-error --output %TEMP%\BDOHan\languagedata_tw.loc
-)
+curl -L https://dn.blackdesert.com.tw/UploadData/ads/languagedata_tw/%version%/languagedata_tw.loc --silent --fail --show-error --output %TEMP%\BDOHan\languagedata_tw.loc
 if "%errorlevel%" NEQ "0" (
 	echo 下载失败
 	call :exit
@@ -67,15 +58,31 @@ echo 下载完成
 
 echo 开始解码语言文件
 bin\BDO_decrypt %GAMEPATH%\ads\languagedata_en.loc %TEMP%\BDOHan\languagedata_en.txt
+if "%errorlevel%" NEQ "0" (
+	echo 解码失败
+	call :exit
+)
 bin\BDO_decrypt %TEMP%\BDOHan\languagedata_tw.loc %TEMP%\BDOHan\languagedata_tw.txt
+if "%errorlevel%" NEQ "0" (
+	echo 解码失败
+	call :exit
+)
 echo 解码完成
 
 echo 开始混合语言文件
 bin\ReplaceLanguage %TEMP%\BDOHan\languagedata_tw.txt %TEMP%\BDOHan\languagedata_en.txt %TEMP%\BDOHan\mixed.txt
+if "%errorlevel%" NEQ "0" (
+	echo 混合失败
+	call :exit
+)
 echo 混合完成
 
 echo 开始汉化游戏
 bin\BDO_encrypt %TEMP%\BDOHan\mixed.txt %GAMEPATH%\ads\languagedata_tw.loc
+if "%errorlevel%" NEQ "0" (
+	echo 汉化失败
+	call :exit
+)
 echo 汉化完成
 
 call :exit
